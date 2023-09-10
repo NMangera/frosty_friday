@@ -1,0 +1,46 @@
+-- Create or replace a virtual warehouse
+CREATE OR REPLACE WAREHOUSE my_ff_warehouse
+WAREHOUSE_SIZE = 'X-SMALL';
+
+
+-- Create or replace a database
+CREATE OR REPLACE DATABASE my_ff_db;
+
+
+-- Create or replace a schema
+CREATE OR REPLACE SCHEMA my_ff_schema;
+
+
+-- Create or replace a named stage
+CREATE OR REPLACE STAGE my_s3_stage
+  URL = 's3://frostyfridaychallenges/challenge_1/';
+
+-- List the objects in the stage
+LIST @my_s3_stage;
+
+--Create a file format
+CREATE FILE FORMAT VARIANT_FORMAT
+TYPE='CSV',FIELD_DELIMITER=none;
+
+--peek into the data
+select $1, METADATA$FILENAME from @my_s3_stage (file_format=>'VARIANT_FORMAT');
+
+-- Create or replace a table with a two columns
+CREATE OR REPLACE TABLE my_ff_table (happydays varchar, source_file varchar);
+
+-- View all records table
+SELECT * FROM my_ff_table;
+
+
+-- move data from stage into the table
+COPY INTO my_ff_table 
+FROM (SELECT $1, METADATA$FILENAME FROM @MY_s3_stage)
+
+-- validate successful load into the target table
+SELECT * FROM my_ff_table;
+
+-- arrange rows in file order
+SELECT * FROM my_ff_table ORDER BY SOURCE_FILE;
+
+--Validate Load History
+SELECT * FROM INFORMATION_SCHEMA.LOAD_HISTORY;
