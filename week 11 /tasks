@@ -1,0 +1,93 @@
+
+--create for virtual warehouse
+create or replace warehouse ff_warehouse;
+use warehouse ff_warehouse;
+
+-- Set the database
+create or replace database frosty_friday;
+use database frosty_friday;
+
+--create a file format 
+create or replace file format milk
+TYPE = CSV
+SKIP_HEADER = 1;
+
+-- Create the stage that points at the data.
+create or replace stage week_11_frosty_stage
+    url = 's3://frostyfridaychallenges/challenge_11/'
+    file_format = milk;
+
+--verify the contents of the stage
+list @frosty_friday.public.week_11_frosty_stage;
+    
+-- Create the table as a CTAS statement.
+create or replace table week11 as
+select m.$1 as milking_datetime,
+        m.$2 as cow_number,
+        m.$3 as fat_percentage,
+        m.$4 as farm_code,
+        m.$5::timestamp as centrifuge_start_time,
+        m.$6::timestamp as centrifuge_end_time,
+        m.$7 as centrifuge_kwph,
+        m.$8 as centrifuge_electricity_used,
+        m.$9::int as centrifuge_processing_time,
+        m.$10  as task_used
+from @week_11_frosty_stage (pattern => '.*milk_data.*[.]csv') m;
+
+--verify data has loaded from the stage into the table
+select * from week11;
+
+-- TASK 1: Remove all the centrifuge dates and centrifuge kwph and replace them with NULLs WHERE fat = 3. 
+-- Add note to task_used.
+create or replace task whole_milk_updates
+    schedule = '1400 minutes'
+as
+    update week11
+    set
+        centrifuge_start_time = null,
+        centrifuge_end_time = null,
+        centrifuge_kwph = null,
+        task_used = concat(
+        SYSTEM$CURRENT_USER_TASK_NAME(),
+        ' at ',
+        CURRENT_TIMESTAMP()::STRING)
+    where fat_percentage = 3;
+
+
+-- TASK 2: Calculate centrifuge processing time (difference between start and end time) WHERE fat != 3. 
+-- Add note to task_used.
+create or replace task skim_milk_updates
+    after whole_milk_updates
+as
+    update week11
+    set
+        centrifuge_processing_time = timestampdiff(minute, centrifuge_start_time, centrifuge_end_time),
+        centrifuge_electricity_used = 
+        timestampdiff(
+            minute
+          , centrifuge_start_time
+          , centrifuge_end_time)
+         * centrifuge_kwph / 60, 
+        task_used = concat(
+        SYSTEM$CURRENT_USER_TASK_NAME(),
+        ' at ',
+        CURRENT_TIMESTAMP()::STRING)
+    where fat_percentage != 3
+
+--allow tasks to run one after another    
+SELECT SYSTEM$TASK_DEPENDENTS_ENABLE('frosty_friday.public.whole_milk_updates');
+
+--start the task
+alter task whole_milk_updates resume;
+
+--view task
+show tasks; 
+
+-- Manually execute the task.
+execute task whole_milk_updates;
+
+-- Check that the data looks as it should.
+select * from week11;
+
+-- Check that the numbers are correct.
+select task_used, count(*) as row_count from week11 group by task_used;
