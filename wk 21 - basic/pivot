@@ -1,0 +1,79 @@
+--create a virtual warehouse
+create or replace warehouse ff_warehouse;
+use warehouse ff_warehouse;
+
+-- create a database
+create or replace database frosty_friday;
+use database frosty_friday;
+
+-- create a table
+create or replace table hero_powers (
+hero_name VARCHAR(50),
+flight VARCHAR(50),
+laser_eyes VARCHAR(50),
+invisibility VARCHAR(50),
+invincibility VARCHAR(50),
+psychic VARCHAR(50),
+magic VARCHAR(50),
+super_speed VARCHAR(50),
+super_strength VARCHAR(50)
+);
+
+-- Display the contents of the table
+SELECT * FROM hero_powers;
+
+--input values into the table
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('The Impossible Guard', '++', '-', '-', '-', '-', '-', '-', '+');
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('The Clever Daggers', '-', '+', '-', '-', '-', '-', '-', '++');
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('The Quick Jackal', '+', '-', '++', '-', '-', '-', '-', '-');
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('The Steel Spy', '-', '++', '-', '-', '+', '-', '-', '-');
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('Agent Thundering Sage', '++', '+', '-', '-', '-', '-', '-', '-');
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('Mister Unarmed Genius', '-', '-', '-', '-', '-', '-', '-', '-');
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('Doctor Galactic Spectacle', '-', '-', '-', '++', '-', '-', '-', '+');
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('Master Rapid Illusionist', '-', '-', '-', '-', '++', '-', '+', '-');
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('Galactic Gargoyle', '+', '-', '-', '-', '-', '-', '++', '-');
+insert into hero_powers (hero_name, flight, laser_eyes, invisibility, invincibility, psychic, magic, super_speed, super_strength) values ('Alley Cat', '-', '++', '-', '-', '-', '-', '-', '+');
+
+-- Display contents of populated table
+SELECT * FROM hero_powers;
+
+-- Create a temporary table to hold the transformed data
+CREATE OR REPLACE TEMPORARY TABLE temp_hero_powers AS
+SELECT
+    hero_name,
+    UPPER(CASE
+        WHEN MAX(flight) = '++' THEN 'flight'
+        WHEN MAX(laser_eyes) = '++' THEN 'laser_eyes'
+        WHEN MAX(invisibility) = '++' THEN 'invisibility'
+        WHEN MAX(invincibility) = '++' THEN 'invincibility'
+        WHEN MAX(psychic) = '++' THEN 'psychic'
+        WHEN MAX(magic) = '++' THEN 'magic'
+        WHEN MAX(super_speed) = '++' THEN 'super_speed'
+        WHEN MAX(super_strength) = '++' THEN 'super_strength'
+    END) AS main_power,
+    UPPER(CASE
+        WHEN MAX(flight) = '+' THEN 'flight'
+        WHEN MAX(laser_eyes) = '+' THEN 'laser_eyes'
+        WHEN MAX(invisibility) = '+' THEN 'invisibility'
+        WHEN MAX(invincibility) = '+' THEN 'invincibility'
+        WHEN MAX(psychic) = '+' THEN 'psychic'
+        WHEN MAX(magic) = '+' THEN 'magic'
+        WHEN MAX(super_speed) = '+' THEN 'super_speed'
+        WHEN MAX(super_strength) = '+' THEN 'super_strength'
+    END) AS secondary_power
+FROM hero_powers
+GROUP BY hero_name;
+
+-- Insert the transformed data into the final table, excluding the row with null values
+CREATE OR REPLACE TABLE hero_powers_transformed AS
+SELECT
+    hero_name,
+    main_power,
+    secondary_power
+FROM temp_hero_powers
+WHERE main_power IS NOT NULL OR secondary_power IS NOT NULL
+;
+
+--view the contents of the output
+SELECT * FROM hero_powers_transformed
+ORDER BY HERO_NAME;
