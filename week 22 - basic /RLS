@@ -1,0 +1,64 @@
+
+-- File format to read the CSV
+create or replace file format frosty_csv
+    type = csv
+    field_delimiter = ','
+    field_optionally_enclosed_by = '"'
+    skip_header = 1;
+
+-- Creates stage to read the CSV
+create or replace stage w22_frosty_stage
+  url = 's3://frostyfridaychallenges/challenge_22/'
+  file_format = frosty_csv;
+  
+-- Roles needed for challenge
+create or replace role rep1;
+create or replace role rep2;
+
+-- Grant roles to self for testing
+grant role rep1 to user normie;
+grant role rep2 to user normie;
+
+-- Enable warehouse usage. Assumes that `public` has access to the warehouse
+grant role public to role rep1;
+grant role public to role rep2;
+
+-- Create the table from the CSV in S3
+create or replace table week22 as
+select t.$1::int id, t.$2::varchar(50) city, t.$3::int district from @w22_frosty_stage (pattern=>'.*sales_areas.*') t;
+
+--query table week22;
+select * from week22;
+
+-- create row access policy
+create or replace row access policy rep_cities as (id number) returns boolean -> 
+(
+       ( is_role_in_session('rep1') and id%2=1 )
+    or ( is_role_in_session('rep2') and id%2=0 )
+);
+
+--apply row access policy to table
+alter table week22 add row access policy rep_cities on (id);
+
+-- Code for creating the secure view
+create or replace secure view secure_cities as
+select uuid_string() as id, city, district 
+from week22;
+
+
+-- Roles need DB access
+grant usage on database frosty_friday to role rep1;
+grant usage on database frosty_friday to role rep2;
+-- And schema access
+grant usage on schema frosty_friday.public to role rep1;
+grant usage on schema frosty_friday.public to role rep2;
+-- And usage of view
+grant select on view frosty_friday.public.secure_cities to role rep1;
+grant select on view frosty_friday.public.secure_cities to role rep2;
+
+-- Get the result of queries
+use role rep1
+select * from frosty_friday.public.secure_cities;
+
+use role rep2
+select * from frosty_friday.public.secure_cities;
