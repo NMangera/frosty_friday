@@ -1,0 +1,40 @@
+-- create an internal stage
+CREATE OR REPLACE STAGE stg_wk23;
+
+--list files in stage
+LIST @stg_wk23;
+
+--load date to the stage
+PUT file://C:\MyPath\Documents\temp\data_batch_*1.csv @stg_wk23;
+
+--list files in stage
+LIST @stg_wk23;
+
+--create a table in in which to land the data
+CREATE OR REPLACE TABLE public.wk23
+(id STRING
+,first_name STRING
+,last_name STRING
+,email STRING
+,gender STRING
+,ip_address STRING
+);  
+
+--move data from internal stage to table
+COPY INTO public.wk23
+FROM @stg_wk23
+FILE_FORMAT = (TYPE = CSV FIELD_DELIMITER = ',' SKIP_HEADER = 1)
+ON_ERROR = 'SKIP_FILE';
+
+--query the table
+SELECT * FROM public.wk23;
+
+--move the data from internal stage to table
+COPY INTO public.wk23
+FROM @stg_wk23
+FILE_FORMAT = (TYPE = CSV FIELD_DELIMITER = ',' SKIP_HEADER = 1, FIELD_OPTIONALLY_ENCLOSED_BY = '"')
+ON_ERROR = 'SKIP_FILE';
+
+--query the results
+SELECT * FROM public.wk23
+ORDER BY ID::INT ASC;
