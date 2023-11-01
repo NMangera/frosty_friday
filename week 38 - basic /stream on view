@@ -1,0 +1,72 @@
+-- Create first table
+CREATE OR REPLACE TABLE employees (
+id INT,
+name VARCHAR(50),
+department VARCHAR(50)
+);
+
+-- query the table
+SELECT * FROM employees;
+
+-- Insert sample data into the employees table
+INSERT INTO employees (id, name, department)
+VALUES
+(1, 'Alice', 'Sales'),
+(2, 'Bob', 'Marketing');
+
+-- query the table
+SELECT * FROM employees;
+
+-- Create second table tracking sales
+CREATE TABLE sales (
+id INT,
+employee_id INT,
+sale_amount DECIMAL(10, 2)
+);
+
+-- Insert sample data into the sales table
+INSERT INTO sales (id, employee_id, sale_amount)
+VALUES
+(1, 1, 100.00),
+(2, 1, 200.00),
+(3, 2, 150.00);
+
+-- query records from the sales table
+SELECT * FROM sales;
+
+-- Create a view that combines data from both employees and sales tables
+CREATE OR REPLACE VIEW employee_sales AS
+SELECT e.id, e.name, e.department, s.sale_amount
+FROM employees e
+JOIN sales s ON e.id = s.employee_id;
+
+-- Query the employee_sales view to verify the combined data
+SELECT * FROM employee_sales;
+
+-- Create a stream based on the employee_sales view
+CREATE OR REPLACE STREAM sales_check ON VIEW employee_sales;
+
+-- Query the sales_check stream
+SELECT * FROM sales_check;
+
+-- Test the stream by deleting a record from the employees table
+DELETE FROM employees
+WHERE ID = 2;
+
+-- View the stream to check for DELETE actions
+SELECT * FROM sales_check
+WHERE "METADATA$ACTION" = 'DELETE';
+
+-- Create a new table to store deleted sales data
+CREATE OR REPLACE TABLE deleted_sales(
+id INT,
+NAME VARCHAR(50),
+DEPARTMENT VARCHAR(50),
+SALE_AMOUNT DECIMAL(10, 2)
+);
+
+-- Move any changes tracked in the stream to the deleted_sales table
+INSERT INTO deleted_sales(id, NAME, DEPARTMENT, SALE_AMOUNT) SELECT id, NAME, DEPARTMENT, SALE_AMOUNT FROM sales_check WHERE METADATA$ACTION = 'DELETE';
+
+-- Confirm contents of the deleted_sales table
+SELECT * FROM deleted_sales;
