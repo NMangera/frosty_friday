@@ -1,0 +1,25 @@
+
+-- Create User Accounts
+CREATE OR REPLACE USER user1;  -- Create 'user1'
+CREATE OR REPLACE USER user2;  -- Create 'user2'
+
+-- Create Session Policy for user1
+CREATE OR REPLACE SESSION POLICY session_policy_prod_1
+  SESSION_UI_IDLE_TIMEOUT_MINS = 8
+  COMMENT = 'user idle time of 8 minutes in the old snowflake UI'
+;
+
+-- Assign Session Policy to user1
+ALTER USER user1 SET SESSION POLICY session_policy_prod_1;
+
+-- Create Session Policy for user2
+CREATE OR REPLACE SESSION POLICY session_policy_prod_2
+  SESSION_IDLE_TIMEOUT_MINS = 10
+  COMMENT = 'user2 idle time of 10 minutes in SnowSQL'
+;
+
+-- Assign Session Policy to user2
+ALTER USER user2 SET SESSION POLICY session_policy_prod_2;
+
+-- Show Available Session Policies
+SHOW SESSION POLICIES;
