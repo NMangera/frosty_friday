@@ -1,0 +1,11 @@
+-- Create a table with columns key and value
+CREATE OR REPLACE TABLE frosty_tag_table (
+    key int,
+    value string
+);
+
+-- Create a tag with the key purpose
+CREATE OR REPLACE TAG purpose;
+
+-- query system defined function
+SELECT SYSTEM$GET_TAG('purpose', 'frosty_tag_table', 'table');
