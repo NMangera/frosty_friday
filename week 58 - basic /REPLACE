@@ -1,0 +1,32 @@
+-- Create a table with five columns
+CREATE OR REPLACE TABLE measurements (
+    height INT,    -- Column for height in inches
+    weight INT,    -- Column for weight in pounds
+    age INT,       -- Column for age in years
+    gender VARCHAR(),  -- Column for gender information
+    id INT        -- Column for unique identifier
+);
+
+-- Insert data into the table
+insert into measurements (height, weight, age, gender, id) values (41, 178, 74, 'other', 1);
+insert into measurements (height, weight, age, gender, id) values (188, 145, 87, 'other', 2);
+insert into measurements (height, weight, age, gender, id) values (215, 725, 30, 'male', 3);
+insert into measurements (height, weight, age, gender, id) values (159, 48, 116, 'female', 4);
+insert into measurements (height, weight, age, gender, id) values (243, 204, 6, 'other', 5);
+insert into measurements (height, weight, age, gender, id) values (232, 306, 30, 'male', 6);
+insert into measurements (height, weight, age, gender, id) values (261, 602, 62, 'other', 7);
+insert into measurements (height, weight, age, gender, id) values (143, 829, 113, 'female', 8);
+insert into measurements (height, weight, age, gender, id) values (62, 190, 86, 'male', 9);
+insert into measurements (height, weight, age, gender, id) values (249, 15, 73, 'male', 10);
+
+-- query data from the measurements table
+select * from measurements;
+
+-- Select columns with modifications
+select
+    HEIGHT,
+    WEIGHT * 1.1 AS WEIGHT,
+    AGE - 1 AS AGE,
+    ID,
+    REPLACE(GENDER, 'other', 'unknown') AS GENDER
+from measurements;
