@@ -1,0 +1,42 @@
+--create function that takes three arguments and outputs a true/false
+CREATE OR REPLACE FUNCTION CheckDateGap(application_date DATE, document_publication_date DATE, patent_type VARCHAR) 
+RETURNS VARCHAR
+LANGUAGE SQL
+AS
+$$
+    CASE WHEN (DATEDIFF(day, application_date, document_publication_date) <= 365 AND patent_type = 'Reissue') THEN 'TRUE'
+         WHEN (DATEDIFF(day, application_date, document_publication_date) <= 730 AND patent_type = 'Design') THEN 'TRUE'
+    ELSE 'FALSE'
+    END
+$$
+;
+
+-- Test UDF functionally
+SELECT
+    CheckDateGap('2023-09-05'::timestamp, '2023-09-06'::timestamp, 'Reissue') AS EXPECT_TRUE
+  , CheckDateGap('2020-09-07'::timestamp, '2023-09-06'::timestamp, 'Design') AS EXPECT_FALSE
+;
+
+--CREATE TABLE USING A SELECT QUERY WHERE Nvidia is the designated assignee
+CREATE OR REPLACE VIEW EXPECTED_OUTPUT 
+AS
+SELECT patent_index.patent_id
+    , invention_title
+    , patent_type
+    , application_date 
+    , document_publication_date
+    , CheckDateGap(application_date, document_publication_date,  patent_type) AS CHALBOOL
+FROM cybersyn_us_patent_grants.cybersyn.uspto_contributor_index AS contributor_index
+INNER JOIN
+cybersyn_us_patent_grants.cybersyn.uspto_patent_contributor_relationships AS relationships
+    ON contributor_index.contributor_id = relationships.contributor_id
+INNER JOIN
+    cybersyn_us_patent_grants.cybersyn.uspto_patent_index AS patent_index
+    ON relationships.patent_id = patent_index.patent_id
+WHERE contributor_index.contributor_name ILIKE 'NVIDIA CORPORATION'
+    AND relationships.contribution_type = 'Assignee - United States Company Or Corporation';
+
+--query the view
+SELECT * FROM EXPECTED_OUTPUT
+WHERE PATENT_TYPE = 'Design' OR PATENT_TYPE = 'Reissue'
+ORDER BY PATENT_TYPE;
