@@ -1,0 +1,83 @@
+-- Define a file format for ingesting Parquet files
+CREATE OR REPLACE FILE FORMAT INGEST_PARQUET
+TYPE = 'parquet';
+
+-- Create a  landing area for the externally staged data
+CREATE OR REPLACE STAGE ff_wk2_parquet
+    url='s3://snowflakemastery/ff_challenge/'
+    STORAGE_INTEGRATION = s3_int_ff
+    FILE_FORMAT = INGEST_PARQUET;
+
+-- display files in the landing area
+LIST @ff_wk2_parquet;
+
+-- Perform a basic query on the Parquet files, selecting the first column
+SELECT $1 FROM @ff_wk2_parquet;
+
+-- Infer the schema (useful for understanding data structure)
+SELECT * FROM TABLE(infer_schema(
+    location => '@ff_wk2_parquet',
+    files => 'employees.parquet',
+    file_format => 'INGEST_PARQUET',
+    ignore_case => true
+));
+
+-- Create a table using the structure inferred from the Parquet file
+CREATE OR REPLACE TABLE emp_01
+USING TEMPLATE (
+    SELECT array_agg(object_construct(*)) FROM TABLE(
+        infer_schema(
+            location => '@ff_wk2_parquet',
+            files => 'employees.parquet',
+            file_format => 'INGEST_PARQUET'
+        )
+    )
+);
+
+-- Describe the structure of the newly created table
+DESC TABLE emp_01;
+
+-- Load data into the table by selecting and casting columns from the Parquet files
+COPY INTO emp_01 FROM (
+    SELECT
+        $1:employee_id::NUMBER AS employee_id,
+        $1:first_name::VARCHAR,
+        $1:last_name::VARCHAR AS LAST_NAME,
+        ...
+        $1:suffix::VARCHAR
+    FROM @ff_wk2_parquet
+    (file_format => INGEST_PARQUET) t
+);
+
+-- query data from the populated table
+SELECT * FROM emp_01;
+
+-- Create a view with just the columns of interest 
+CREATE OR REPLACE VIEW change_track
+AS
+SELECT 
+    $1 AS employee_id,
+    $13 AS dept,
+    $14 AS job_title
+FROM emp_01;
+
+-- query data from theview
+SELECT * FROM CHANGE_TRACK;
+
+-- Create a stream on the view for real-time change tracking
+CREATE OR REPLACE STREAM track_changes
+ON VIEW change_track;
+
+-- display  data from thestream
+SELECT * FROM track_changes;
+
+-- Update specific rows in the table, modifying values in certain columns
+UPDATE emp_01 SET $9 = 'Japan' WHERE $1 = 8;
+UPDATE emp_01 SET $3 = 'Forester' WHERE $1 = 22;
+UPDATE emp_01 SET $13 = 'Marketing' WHERE $1 = 25;
+UPDATE emp_01 SET $16 = 'Ms' WHERE $1 = 32;
+UPDATE emp_01 SET $14 = 'Senior Financial Analyst' WHERE $1 = 68;
+
+
+-- verify the stream has picked up on the changes
+SELECT * FROM track_changes;
