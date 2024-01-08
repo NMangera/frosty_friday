@@ -1,0 +1,84 @@
+-- Set start and end date variables
+set start_date = '2000-01-01';
+set row_count = (select datediff(days, $start_date, current_date()));
+
+
+create or replace table ff_week_19 as (
+    -- Generate dates between start and end date
+    with dates as (
+        select
+            dateadd(day, seq4(), to_date($start_date)) as date
+        from
+            table(generator(rowcount => $row_count))
+    ),
+
+    -- Generate formatted date versions
+    date_formats as (
+        select
+            date,
+            year(date) as year,
+            monthname(date) as month_short,
+            to_char(date,'MMMM') as month_long,
+            day(date) as day_of_month,
+            dayofweekiso(date) as day_of_week,
+            weekofyear(date) as week_of_year,
+            dayofyear(date) as day_of_year
+        from dates
+    )
+
+    select * from date_formats
+);
+
+-- view table
+select * from ff_week_19;
+
+-- Create business days function
+create or replace function calculate_business_days(start_date date, end_date date, include_last_day boolean)
+returns number as
+    $$
+    select count(*)
+    from ff_week_19
+    where day_of_week not in (6,7)
+        and date >= start_date
+        and date < (end_date + include_last_day::number)
+    $$;
+
+-- Test 1
+select
+    calculate_business_days('2020-11-2','2020-11-6',true) as including,
+    calculate_business_days('2020-11-2','2020-11-6',false) as excluding;
+
+--insert test data
+create or replace table testing_data (
+id INT,
+start_date DATE,
+end_date DATE
+);
+insert into testing_data (id, start_date, end_date) values (1, '11/11/2020', '9/3/2022');
+insert into testing_data (id, start_date, end_date) values (2, '12/8/2020', '1/19/2022');
+insert into testing_data (id, start_date, end_date) values (3, '12/24/2020', '1/15/2022');
+insert into testing_data (id, start_date, end_date) values (4, '12/5/2020', '3/3/2022');
+insert into testing_data (id, start_date, end_date) values (5, '12/24/2020', '6/20/2022');
+insert into testing_data (id, start_date, end_date) values (6, '12/24/2020', '5/19/2022');
+insert into testing_data (id, start_date, end_date) values (7, '12/31/2020', '5/6/2022');
+insert into testing_data (id, start_date, end_date) values (8, '12/4/2020', '9/16/2022');
+insert into testing_data (id, start_date, end_date) values (9, '11/27/2020', '4/14/2022');
+insert into testing_data (id, start_date, end_date) values (10, '11/20/2020', '1/18/2022');
+insert into testing_data (id, start_date, end_date) values (11, '12/1/2020', '3/31/2022');
+insert into testing_data (id, start_date, end_date) values (12, '11/30/2020', '7/5/2022');
+insert into testing_data (id, start_date, end_date) values (13, '11/28/2020', '6/19/2022');
+insert into testing_data (id, start_date, end_date) values (14, '12/21/2020', '9/7/2022');
+insert into testing_data (id, start_date, end_date) values (15, '12/13/2020', '8/15/2022');
+insert into testing_data (id, start_date, end_date) values (16, '11/4/2020', '3/22/2022');
+insert into testing_data (id, start_date, end_date) values (17, '12/24/2020', '8/29/2022');
+insert into testing_data (id, start_date, end_date) values (18, '11/29/2020', '10/13/2022');
+insert into testing_data (id, start_date, end_date) values (19, '12/10/2020', '7/31/2022');
+insert into testing_data (id, start_date, end_date) values (20, '11/1/2020', '10/23/2021');
+
+-- Test 2
+select
+    start_date,
+    end_date,
+    calculate_business_days(start_date, end_date, true) as including,
+    calculate_business_days(start_date, end_date, false) as excluding
+from testing_data;
