@@ -1,0 +1,23 @@
+# The Snowpark package is required for Python Worksheets. 
+# You can add more packages by selecting them using the Packages control and then importing them.
+
+import snowflake.snowpark as snowpark
+import pandas as pd
+
+def main(session: snowpark.Session): 
+    # Your code goes here, inside the "main" handler.
+    #create the data using key value pairs
+    data = {'STATEMENT1': ['We', 'Love', 'Frosty', 'Friday'],
+        'STATEMENT2': ['Python', 'Worksheets', 'Are', 'Cool']}
+
+    #create a pandas dataframe
+    df = pd.DataFrame(data)
+
+    #initialise the python object dataframe to the data
+    df = session.createDataFrame(df)
+
+    #return the dataframe(table) with the data -will appear in the results tab below
+    return df
+
+    
+    
