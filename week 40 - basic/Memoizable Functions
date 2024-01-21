@@ -1,0 +1,25 @@
+--understand the structure of the table, with columns and data types
+describe table SNOWFLAKE_SAMPLE_DATA.TPCH_SF100.lineitem;
+
+--create a function named 'REVENUE'
+CREATE OR REPLACE FUNCTION REVENUE()
+RETURNS NUMBER(38,0)
+MEMOIZABLE -- This keyword indicates that the result of the function can be cached for performance optimization.
+
+AS $$
+-- This is the start of the function body.
+
+-- A subquery is used to calculate the total revenue.
+SELECT REVENUE 
+    FROM (
+    SELECT SUM((L_EXTENDEDPRICE-L_DISCOUNT)*L_QUANTITY) AS REVENUE
+    FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF100.LINEITEM
+    INNER JOIN SNOWFLAKE_SAMPLE_DATA.TPCH_SF100.SUPPLIER ON L_SUPPKEY = S_SUPPKEY
+    INNER JOIN SNOWFLAKE_SAMPLE_DATA.TPCH_SF100.NATION ON S_NATIONKEY = N_NATIONKEY 
+    INNER JOIN SNOWFLAKE_SAMPLE_DATA.TPCH_SF100.REGION ON N_REGIONKEY = R_REGIONKEY
+    WHERE R_NAME = 'EUROPE'
+)
+$$;
+
+--call the function
+SELECT REVENUE();
